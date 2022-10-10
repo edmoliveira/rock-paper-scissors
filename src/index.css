@@ -1,0 +1,10 @@
+@font-face {
+    font-family: fontG;
+    src: url(fontG.TTF);
+}
+
+body{
+    padding:0px;
+    margin:0px;
+    overflow: hidden;
+}
