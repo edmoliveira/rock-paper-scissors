@@ -21,17 +21,69 @@ function Drawing(control) {
         const personX2 = (personAreaW * 2) + (personAreaW / 2 - personW / 2);
         const personY = oCanvas.height / 2 - personH / 2;
     
+        ctx.save();
+
+        ctx.globalAlpha = _control.startAlpha();
+
         personDraw(ctx, personX1, personY, personW, personH, _control.getPlayer1().text);
-        personDraw(ctx, personX2, personY, personW, personH, _control.getPlayer2().text);
-    
+        personDraw(ctx, personX2, personY, personW, personH, _control.getPlayer2().text);        
+
         playerDraw(ctx, _control.getPlayer1());
         playerDraw(ctx, _control.getPlayer2());
 
+        ctx.restore();
+
+        ctx.save();
+
+        ctx.globalAlpha = _control.stoppedAlpha();
+
+        const stoppedW = oCanvas.width * 0.7;
+        const stoppedY = oCanvas.height * 0.9;
+        const stoppedX = oCanvas.width / 2 - stoppedW / 2;
+
+        stoppedDraw(ctx, stoppedX, stoppedW, stoppedY, 'Waiting...');
+
+        ctx.restore();
+
         const resultW = oCanvas.width * 0.4;
-        const resultY = oCanvas.height * 0.4;
+        const resultY = oCanvas.height * 0.8;
         const resultX = oCanvas.width / 2 - resultW / 2;
 
         resultDraw(ctx, resultX, resultW, resultY, _control.getLabel());
+    }
+
+    function stoppedDraw(ctx, x, w, y, text){    
+        const fontSize = w * 0.1;
+
+        ctx.save();
+
+        ctx.beginPath();
+    
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+        ctx.shadowColor = '#FFFFFF';
+        ctx.shadowBlur = 30;
+    
+        ctx.font = Math.round(fontSize) + "px fontG";
+    
+        let textW = ctx.measureText(text).width;
+        let textX = x + w / 2 - textW / 2;
+        let textY = y;
+    
+        ctx.fillStyle = '#000000';
+        ctx.fillText(text, textX + fontSize * 0.03, textY + fontSize * 0.03);
+    
+        let gradientText = ctx.createLinearGradient(textX, textY, textX + textW, textY);
+        gradientText.addColorStop(0.1, '#49FFFB');
+        gradientText.addColorStop(0.5, '#00FF90');
+        gradientText.addColorStop(0.9, '#49FFFB');
+    
+        ctx.fillStyle = gradientText;
+        ctx.fillText(text, textX, textY);
+    
+        ctx.closePath();
+
+        ctx.restore();
     }
 
     function resultDraw(ctx, x, w, y, label){    

@@ -6,6 +6,8 @@ const server = http.Server(app);
 
 const socketIO = require('socket.io');
 
+let clientCount = 0;
+
 const io = new socketIO.Server(server, {
 	cors: {
 		origins: ["*"], 
@@ -22,20 +24,29 @@ const io = new socketIO.Server(server, {
 });
 
 io.on('connection', (socket) => {	
+    clientCount++;
+
     socket.on('canPlay', function() {
-        console.log('canPlay');
         io.emit('canPlay', 'start');
     });
 
     socket.on('move', function(data) {
-        console.log(data);
         io.emit('move', data);
     });
 
     console.log('CONNECTED: ' + socket.handshake.address);
+
+    if(clientCount === 3) {
+        setTimeout(() => {
+            io.emit('start', true);
+        }, 500);
+    }
 	
 	socket.on("disconnect", () => {
+        clientCount--;
 		console.log('DISCONNECTED: ' + socket.handshake.address);
+
+        io.emit('stop', true);
 	});	
 	
 })

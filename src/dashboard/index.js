@@ -1,6 +1,8 @@
 function Control() {
     const self = this;
 
+    let socket;
+
     const oCanvas = document.querySelector('canvas');
     const context = oCanvas.getContext('2d');
     const backgroundImage = new Image();
@@ -15,12 +17,30 @@ function Control() {
     const oDrawing = new Drawing(self);
     const timer = new Timer();
 
+    let _controlAnimation = animationEnum.NULL;
+    
+    let _wasStarted = false;
+    let _startAlpha = 0;
+    let _stoppedAlpha = 1;
+
     backgroundImage.src = 'images/background.png'
     personImage.src = 'images/person.png'
     rockImage.src = 'images/rock.png'
     scissorsImage.src = 'images/scissors.png'
     paperImage.src = 'images/paper.png'
     nullImage.src = 'images/null.png'
+
+    self.startAlpha = () => {
+        return _startAlpha;
+    }
+
+    self.stoppedAlpha = () => {
+        return _stoppedAlpha;
+    }
+
+    self.wasStarted = () => {
+        return _wasStarted;
+    }
 
     self.getLabel = () => {
         return label;
@@ -41,25 +61,53 @@ function Control() {
     self.getPersonImage = () => {
         return personImage;
     }
-    
-    window.onclick = () => {
-        setMove(player1, gameEnum.SCISSORS);
-        setMove(player2, gameEnum.SCISSORS);
-
-        const result = compare(player1.move, player2.move);
-        
-        player1.openAnimation1(result === 1, result === 0);
-        player2.openAnimation1(result === 2, result === 0);
-
-        if(result === 0) {
-            label.text = 'Tie Game';
-        }
-        else {
-            label.text = result === 1 ? player1.text : player2.text;
-        }
-    }
 
     window.onload = () => {
+        socket = io('http://127.0.0.1:3000');
+
+        socket.on('connect', function () {
+            console.log('Connected!');
+        });
+
+        socket.on('start', function () {
+            _wasStarted = true;
+            _controlAnimation = animationEnum.OPEN;
+        });
+
+        socket.on('stop', function () {
+            _wasStarted = false;
+            _controlAnimation = animationEnum.CLOSE;
+        });
+
+        socket.on('move', function (data) {
+            const d = JSON.parse(data);
+        
+            if(d.player === 1) {
+                setMove(player1, d.move);
+            }
+            else if(d.player === 2) {
+                setMove(player2, d.move);
+            }
+        
+            if(player1.move != null && player2.move != null) {
+                const result = compare(player1.move, player2.move);
+        
+                player1.openAnimation1(result === 1, result === 0);
+                player2.openAnimation1(result === 2, result === 0);
+        
+                if(result === 0) {
+                    label.text = 'Tie Game';
+                }
+                else {
+                    label.text = result === 1 ? player1.text : player2.text;
+                }
+            }
+        });
+
+        socket.on('close', function() {
+            console.log('Connection closed');
+        });
+
         timer.begin();
 
         resize();
@@ -69,6 +117,13 @@ function Control() {
     window.onresize = () => {
         resize();
         oDrawing.draw(oCanvas, context, self);
+    };
+
+    window.onbeforeunload = () => {
+        if(socket != null) {
+            socket.disconnect();
+            socket = null;
+        }
     };
     
     function setMove(player, move) {
@@ -82,6 +137,9 @@ function Control() {
         }
         else if(move === gameEnum.PAPER){
             player.image = paperImage;
+        }
+        else {
+            player.image = nullImage;
         }
     }
 
@@ -107,6 +165,14 @@ function Control() {
         label.fontSizeOriginal = 0;
         label.fontSizeDest = (oCanvas.width * 2 + oCanvas.height * 2) * 0.02;
         label.fontSize = label.fontSizeOriginal;
+        label.onEndAnimation = () => {
+            setMove(player1, null);
+            setMove(player2, null);
+
+            if(socket != null) {
+                socket.emit('canPlay', true);
+            }
+        }
 
         const personAreaW = oCanvas.width / 3;
     
@@ -165,11 +231,13 @@ function Control() {
 
         context.clearRect(0, 0, oCanvas.width, oCanvas.height);
 
-        playerAnimation1(player1);
-        playerAnimation1(player2);
+        executeControlAnimation();
 
-        playerAnimation2(player1);
-        playerAnimation2(player2);
+        executePlayerAnimation1(player1);
+        executePlayerAnimation1(player2);
+
+        executePlayerAnimation2(player1);
+        executePlayerAnimation2(player2);
 
         labelAnimation(label);
 
@@ -180,7 +248,36 @@ function Control() {
         requestAnimationFrame(animation);
     }
 
-    playerAnimation1 = function(player) {
+    executeControlAnimation = function() {
+        const value = timer.getValuePosition(getValueScale(1));
+
+        if(_controlAnimation === animationEnum.OPEN) {
+            _stoppedAlpha -= value;
+            _startAlpha += value;
+
+            if(_startAlpha >= 1) {
+                _stoppedAlpha = 0;
+                _startAlpha = 1;
+                _controlAnimation = animationEnum.NULL;
+
+                if(socket != null) {
+                    socket.emit('canPlay', true);
+                }
+            }
+        }
+        else if(_controlAnimation === animationEnum.CLOSE) {
+            _stoppedAlpha += value;
+            _startAlpha -= value;
+
+            if(_stoppedAlpha >= 1) {
+                _stoppedAlpha = 1;
+                _startAlpha = 0;
+                _controlAnimation = animationEnum.NULL;
+            }
+        }
+    }
+
+    executePlayerAnimation1 = function(player) {
         const anim1Velocity = getValueScale(400);
 
         if(player.animation1 === animationEnum.OPEN) {
@@ -203,7 +300,7 @@ function Control() {
         }
     }
 
-    playerAnimation2 = function(player) {
+    executePlayerAnimation2 = function(player) {
         const anim1Velocity = getValueScale(400);
 
         if(player.animation2 === animationEnum.OPEN) {
