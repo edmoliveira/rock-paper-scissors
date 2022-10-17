@@ -25,11 +25,23 @@ function Drawing(control) {
 
         ctx.globalAlpha = _control.startAlpha();
 
-        personDraw(ctx, personX1, personY, personW, personH, _control.getPlayer1().text);
-        personDraw(ctx, personX2, personY, personW, personH, _control.getPlayer2().text);        
+        const player1 =  _control.getPlayer1();
+        const player2 =  _control.getPlayer2();
 
-        playerDraw(ctx, _control.getPlayer1());
-        playerDraw(ctx, _control.getPlayer2());
+        personDraw(ctx, personX1, personY, personW, personH, player1.text);
+        personDraw(ctx, personX2, personY, personW, personH, player2.text);        
+
+        playerDraw(ctx, player1);
+        playerDraw(ctx, player2);
+
+        const scoreW = personAreaW;
+        const scoreH = oCanvas.height * 0.2;
+        const scoreX1 = 0;
+        const scoreX2 = personAreaW * 2;
+        const scoreY = oCanvas.height - scoreH;
+
+        playerScoreDraw(ctx, scoreX1, scoreY, scoreW, scoreH, player1.score);
+        playerScoreDraw(ctx, scoreX2, scoreY, scoreW, scoreH, player2.score);
 
         ctx.restore();
 
@@ -46,7 +58,7 @@ function Drawing(control) {
         ctx.restore();
 
         const resultW = oCanvas.width * 0.4;
-        const resultY = oCanvas.height * 0.8;
+        const resultY = oCanvas.height * 0.45;
         const resultX = oCanvas.width / 2 - resultW / 2;
 
         resultDraw(ctx, resultX, resultW, resultY, _control.getLabel());
@@ -242,6 +254,40 @@ function Drawing(control) {
 
         ctx.drawImage(obj.image, imageX, imageY, imageW, imageH);
     
+        ctx.restore();
+    }
+
+    function playerScoreDraw(ctx, x, y, w, h, text){    
+        const fontSize = (w * 2 + h * 2) * 0.05;
+    
+        ctx.save();
+
+        ctx.beginPath();
+    
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+        ctx.shadowColor = '#000000';
+        ctx.shadowBlur = 30;
+    
+        ctx.font = Math.round(fontSize) + "px fontG";
+    
+        let textW = ctx.measureText(text).width;
+        let textX = x + w / 2 - textW / 2;
+        let textY = y + fontSize * 1.2;
+    
+        ctx.fillStyle = '#000000';
+        ctx.fillText(text, textX + fontSize * 0.03, textY + fontSize * 0.03);
+    
+        let gradientText = ctx.createLinearGradient(textX, textY, textX + textW, textY);
+        gradientText.addColorStop(0.1, '#E5BB00');
+        gradientText.addColorStop(0.5, '#FFF403');
+        gradientText.addColorStop(0.9, '#E5BB00');
+    
+        ctx.fillStyle = gradientText;
+        ctx.fillText(text, textX, textY);
+    
+        ctx.closePath();
+
         ctx.restore();
     }
 }

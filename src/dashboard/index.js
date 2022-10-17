@@ -67,9 +67,21 @@ function Control() {
 
         socket.on('connect', function () {
             console.log('Connected!');
+
+            setTimeout(() => {
+                socket.emit('addPlayer', '{"type": 0, "id": "", "name": ""}');
+            }, 500);
         });
 
-        socket.on('start', function () {
+        socket.on('start', function (data) {
+            const d = JSON.parse(data);
+
+            player1.text = d.player1;
+            player2.text = d.player2;
+
+            player1.score = 0;
+            player2.score = 0;
+
             _wasStarted = true;
             _controlAnimation = animationEnum.OPEN;
         });
@@ -98,7 +110,7 @@ function Control() {
                 if(result === 0) {
                     label.text = 'Tie Game';
                 }
-                else {
+                else {                    
                     label.text = result === 1 ? player1.text : player2.text;
                 }
             }

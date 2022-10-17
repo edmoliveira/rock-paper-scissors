@@ -24,6 +24,7 @@ class Player {
 
     move = null;
 
+    score = 0;
     text;
 
     openAnimation1(isWinner, isTIe) {
@@ -69,6 +70,7 @@ class Player {
     finishAnimation2() {
         if(this.animation2 === animationEnum.OPEN) {
             setTimeout(() => {
+                this.score++;
                 this.closeAnimation2();
             }, 2000); 
         }
