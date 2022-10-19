@@ -37,7 +37,6 @@ io.on('connection', (socket) => {
 
         if(d.type === 1) {
             players.push(d);
-            
         }
 
         if(clientCount === 3) {
