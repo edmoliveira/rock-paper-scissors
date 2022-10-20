@@ -66,7 +66,8 @@ function Control() {
         socket = io('http://127.0.0.1:3000');
 
         socket.on('connect', function () {
-            console.log('Connected!');
+            _wasStarted = false;
+            _controlAnimation = animationEnum.CLOSE;
 
             setTimeout(() => {
                 socket.emit('addPlayer', '{"type": 0, "id": "", "name": ""}');
@@ -116,8 +117,9 @@ function Control() {
             }
         });
 
-        socket.on('close', function() {
-            console.log('Connection closed');
+        socket.on('disconnect', function() {
+            _wasStarted = false;
+            _controlAnimation = animationEnum.CLOSE;
         });
 
         timer.begin();

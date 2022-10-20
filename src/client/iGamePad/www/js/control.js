@@ -9,12 +9,14 @@ function ControlGamePad(elCanvas, elDiv) {
     const _oUtil = new UtilGame();   
     const _oLoadingGame = new LoadingGame(_elCanvas);  
     const _oImages = factoryImages('img');   
+    const _waitingLabel = factoryLabel('Waiting...');
     const _oDrawing = new Drawing(_oImages);  
     const _context = _elCanvas.getContext('2d');
 
     const _timer = _oUtil.createTimer();
 
     const _buttons = [];
+    const _stopButton = factoryButton(10, null, false, true);
 
     const _enterButton = document.getElementById('enterButton');
     const _nameInput = document.getElementById('nameInput');
@@ -26,6 +28,8 @@ function ControlGamePad(elCanvas, elDiv) {
     let isDeviceReady = false;
     let socket;
     let socketData;
+    let devideId;
+    let elDivIsOpen = false;
 
     //#endregion
 
@@ -64,7 +68,7 @@ function ControlGamePad(elCanvas, elDiv) {
 
                 source.startMoveDestinyAnimation();
 
-                socket.emit('move', '{"id": "' + device.uuid + '", "move": ' + source.move + '}');
+                socket.emit('move', '{"id": "' + devideId + '", "move": ' + source.move + '}');
             }
         }
 
@@ -80,6 +84,19 @@ function ControlGamePad(elCanvas, elDiv) {
         scissorsButton.addClickListener(button_Click)
         _buttons.push(scissorsButton);
 
+        _stopButton.addClickListener(source => {
+            if(!source.disabled) {
+                _stopButton.hide();
+                _waitingLabel.alpha = 0;
+
+                socket.emit('removePlayer', socketData);
+
+                socketData = null;
+
+                elDivShow();
+            }
+        });
+
         window_Resize();
         
         _oLoadingGame.initialize();
@@ -87,59 +104,152 @@ function ControlGamePad(elCanvas, elDiv) {
         loadingScreen(function () {
             _oLoadingGame.kill();
 
+            _waitingLabel.alpha = 1;
+
             executeAnimation();
 
             socket = io('http://127.0.0.1:3000');
 
-            socket.on('connect', function () {
-                elDivShow();
-            });
+            let action = 0;
 
-            socket.on('canPlay', function () {
-                _buttons.forEach(button => {
-                    button.enable();
-                    button.show();
-                    button.startOpenAnimation();
-                    button.startMoveOriginalAnimation();
-                });
-            });
+            const connectFn = () => {
+                if(action === 0) {
+                    if(socketData == null) {
+                        action = 1;
 
-            socket.on('start', function () {
-                elDivHide();
+                        _waitingLabel.alpha = 0;
+    
+                        _stopButton.hide();
+    
+                        _buttons.forEach(button => {
+                            button.hide();
+                        });
+        
+                        elDivShow();
+    
+                        action = 0;
+                    }
+                }
+                else{
+                    setTimeout(connectFn, 100);
+                }
+            };
 
-                _buttons.forEach(button => {
-                    button.show();
-                    button.disable();
-                    button.startOpenAnimation();
-                });
-            });
+            const canPlayFn = () => {
+                if(action === 0) {
+                    action = 1;
 
-            socket.on('stop', function () {
-                _buttons.forEach(button => {
-                    button.disable();
-                    button.startMoveOriginalAnimation();
-                });
-            });
+                    _waitingLabel.startCloseAnimation();
 
-            socket.on('close', function() {
-                elDivHide();
+                    _buttons.forEach(button => {
+                        button.enable();
+                        button.show();
+                        button.startOpenAnimation();
+                        button.startMoveOriginalAnimation();
+                    });
 
-                _buttons.forEach(button => {
-                    button.startCloseAnimation();
-                    button.startMoveOriginalAnimation();
-                });
-            });
+                    action = 0;
+                }
+                else{
+                    setTimeout(canPlayFn, 100);
+                }
+            };
+
+            const startFn = () => {
+                if(action === 0) {
+                    action = 1;
+
+                    _stopButton.show();
+                    _stopButton.enable();
+
+                    _buttons.forEach(button => {
+                        button.show();
+                        button.disable();
+                        button.startOpenAnimation();
+                    });
+
+                    action = 0;
+                }
+                else{
+                    setTimeout(start, 100);
+                }
+            };
+
+            const stopFn = () => {
+                if(action === 0) {
+                    action = 1;
+
+                    if(!elDivIsOpen) {
+                        _waitingLabel.startOpenAnimation();
+                    }                
+    
+                    _buttons.forEach(button => {
+                        button.disable();
+                        button.startCloseAnimation();
+                        button.startMoveOriginalAnimation();
+                    });
+
+                    action = 0;
+                }
+                else{
+                    setTimeout(stop, 100);
+                }
+            };
+
+            const disconnectFn = () => {
+                if(action === 0) {
+                    action = 1;
+
+                    _stopButton.hide();
+                    _stopButton.disable();
+
+                    elDivHide();
+
+                    _waitingLabel.startOpenAnimation();
+    
+                    _buttons.forEach(button => {
+                        button.startCloseAnimation();
+                        button.startMoveOriginalAnimation();
+                    });
+
+                    action = 0;
+                }
+                else{
+                    setTimeout(disconnectFn, 100);
+                }
+            };
+
+            socket.on('connect', connectFn);
+
+            socket.on('canPlay', canPlayFn);
+
+            socket.on('start', startFn);
+
+            socket.on('stop', stopFn);
+
+            socket.on('disconnect', disconnectFn);
 
             socket.on('ping', function () {
-                socket.emit('pong', socketData);
+                if(socketData != null) {
+                    socket.emit('pong', socketData);
+                }
             });
             
         });
     });
 
     _enterButton.onclick = () => {
-        socketData = '{"type": 1, "id": "' + device.uuid + '", "name": "' + _nameInput.value + '"}';
-        socket.emit('addPlayer', socketData);     
+        if((_nameInput.value || '').trim() != '') {            
+            devideId = device.uuid + '_' + _nameInput.value;
+
+            socketData = '{"type": 1, "id": "' + devideId + '", "name": "' + _nameInput.value + '"}';
+
+            elDivHide();
+
+            _waitingLabel.startOpenAnimation();
+            
+            socket.emit('addPlayer', socketData);  
+        }   
     }
 
     window.onbeforeunload = () => {
@@ -182,6 +292,12 @@ function ControlGamePad(elCanvas, elDiv) {
                 break;
             }
         }
+
+        if(buttonSelected == null) {
+            if(_oUtil.searchClickCircle(_stopButton, pageX, pageY)) {
+                buttonSelected = _stopButton;
+            }
+        }
     }
 
     function window_TouchEnd(pageX, pageY) {
@@ -214,7 +330,7 @@ function ControlGamePad(elCanvas, elDiv) {
         const buttonContainer = _elCanvas.width / 3;
 
         const buttonRadius = buttonContainer * 0.35;
-        const centerY = _elCanvas.height / 2;
+        const centerY = _elCanvas.height - buttonRadius * 1.3;
 
         const centerX1 = (buttonContainer / 2);
         const centerX2 = buttonContainer + (buttonContainer / 2);
@@ -223,6 +339,11 @@ function ControlGamePad(elCanvas, elDiv) {
         _buttons[0].setSizePosition(centerX1, centerX2, centerY, buttonRadius);
         _buttons[1].setSizePosition(centerX2, centerX2, centerY, buttonRadius);
         _buttons[2].setSizePosition(centerX3, centerX2, centerY, buttonRadius);
+
+        const stopButtonRadius = buttonContainer * 0.15;
+        const stopButtonY = stopButtonRadius * 1.3;
+
+        _stopButton.setSizePosition(centerX2, centerX2, stopButtonY, stopButtonRadius);
     }
 
     function executeAnimation() {
@@ -232,9 +353,11 @@ function ControlGamePad(elCanvas, elDiv) {
             executeButtonAnimation(button);
         });
 
+        executeLabelAnimation(_waitingLabel);
+
         _context.clearRect(0, 0, _elCanvas.width, _elCanvas.height);
 
-        _oDrawing.draw(_context, 0, 0, _elCanvas.width, _elCanvas.height, _buttons);
+        _oDrawing.draw(_context, 0, 0, _elCanvas.width, _elCanvas.height, _buttons, _waitingLabel, _stopButton);
 
         _timer.end();
     
@@ -280,6 +403,28 @@ function ControlGamePad(elCanvas, elDiv) {
         }
     }
 
+    function executeLabelAnimation(label) {
+        const velocity = 10;
+        const value = _timer.getValuePosition(_oUtil.getValueScale(velocity, _elCanvas.width, _elCanvas.height));
+
+        if(label.closeAnimation === animationEnum.ON) {
+            label.alpha -= value;
+
+            if(label.alpha <= 0) {
+                label.alpha = 0;
+                label.endCloseAnimation();
+            }
+        }
+        else if(label.openAnimation === animationEnum.ON) {
+            label.alpha += value;
+
+            if(label.alpha >= 1) {
+                label.alpha = 1;
+                label.endOpenAnimation();
+            }
+        }
+    }
+
     function loadingScreen(fn) {
         const font1 = new Image();
         font1.src = 'css/fonts/fontG.ttf';
@@ -320,8 +465,10 @@ function ControlGamePad(elCanvas, elDiv) {
             }
         }
     }
-    
+
     function elDivShow() {
+        elDivIsOpen = true;
+
         _elDiv.classList.add('enterShow');
 
         _enterButton.removeAttribute('disabled');
@@ -329,10 +476,14 @@ function ControlGamePad(elCanvas, elDiv) {
     }
 
     function elDivHide() {
+        elDivIsOpen = false;
+
         _elDiv.classList.remove('enterShow');
 
         _enterButton.setAttribute('disabled', '');
         _nameInput.setAttribute('disabled', '');
+
+        _nameInput.value = '';
     }
 
     //#endregion

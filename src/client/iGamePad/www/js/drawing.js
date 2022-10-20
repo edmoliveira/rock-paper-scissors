@@ -10,8 +10,7 @@ function Drawing(oImages) {
 
     //#region Methods public
 
-    _self.draw = function (context, x, y, w, h, buttons) {
-        const area = w * 2 + h * 2;
+    _self.draw = function (context, x, y, w, h, buttons, label, stopButton) {
 
         context.save();
 
@@ -28,6 +27,15 @@ function Drawing(oImages) {
         buttons.forEach(button => {
             buttonDraw(context, button);
         });
+
+        buttonDraw(context, stopButton);
+
+        const labelW = w * 0.7;
+        const labelH = h * 0.5;
+        const labelX = w / 2 - labelW / 2;
+        const labelY = y + h / 2;
+
+        labelDraw(context, labelX, labelY, labelW, labelH, label);
     }
 
     //#endregion
@@ -85,26 +93,88 @@ function Drawing(oImages) {
             context.stroke();
     
             context.closePath();
-    
-            context.shadowOffsetX = 2;
-            context.shadowOffsetY = 2;
-            context.shadowColor = '#000000';
-            context.shadowBlur = 15;
-    
-            const imageW = radius;
-            const imageH = imageW;
-            const imageX = centerX - imageW / 2;
-            const imageY = centerY - imageH / 2;
-    
-            if(button.disabled) {
-                context.filter = 'grayscale(1)';
-            }
 
-            context.drawImage(button.image, imageX, imageY, imageW, imageH);
+            if(button.hasImage) {
+                const imageW = radius;
+                const imageH = imageW;
+                const imageX = centerX - imageW / 2;
+                const imageY = centerY - imageH / 2;
+
+                context.shadowOffsetX = 2;
+                context.shadowOffsetY = 2;
+                context.shadowColor = '#000000';
+                context.shadowBlur = 15;
+
+                if(button.disabled) {
+                    context.filter = 'grayscale(1)';
+                }
+
+                context.drawImage(button.image, imageX, imageY, imageW, imageH);
+            }
+            else {
+                const imageW = radius * 0.7;
+                const imageH = imageW;
+                const imageX = centerX - imageW / 2;
+                const imageY = centerY - imageH / 2;
+
+                context.shadowOffsetX = 2;
+                context.shadowOffsetY = 2;
+                context.shadowColor = '#f0ebeb';
+                context.shadowBlur = 1;
+
+                if(button.disabled) {
+                    context.fillStyle = 'gray';
+                }
+                else {
+                    context.fillStyle = '#000000';    
+                }
+                
+                context.fillRect(imageX, imageY, imageW, imageH);  
+            }
         
             context.restore();
         }
     }
+
+    function labelDraw(context, x, y, w, h, label) {
+        const area = w * 2 + h * 2;
+
+        const fontSize = area * 0.05;
+
+        context.save();
+
+        context.globalAlpha = label.alpha;
+
+        context.beginPath();
+    
+        context.shadowOffsetX = 2;
+        context.shadowOffsetY = 2;
+        context.shadowColor = '#FFFFFF';
+        context.shadowBlur = 30;
+    
+        context.font = Math.round(fontSize) + "px fontG";
+    
+        let textW = context.measureText(label.text).width;
+        let textX = x + w / 2 - textW / 2;
+        let textY = y + fontSize / 2;
+    
+        context.fillStyle = '#000000';
+        context.fillText(label.text, textX + fontSize * 0.03, textY + fontSize * 0.03);
+    
+        let gradientText = context.createLinearGradient(textX, textY, textX + textW, textY);
+        gradientText.addColorStop(0.1, '#49FFFB');
+        gradientText.addColorStop(0.5, '#00FF90');
+        gradientText.addColorStop(0.9, '#49FFFB');
+    
+        context.fillStyle = gradientText;
+        context.fillText(label.text, textX, textY);
+    
+        context.closePath();
+
+        context.restore();
+    }
+
+
 
     //#endregion
 }

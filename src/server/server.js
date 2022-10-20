@@ -26,6 +26,8 @@ const io = new socketIO.Server(server, {
 });
 
 io.on('connection', (socket) => {	
+    clientCount++;
+
     socket.on('canPlay', function() {
         io.emit('canPlay', 'start');
     });
@@ -33,14 +35,13 @@ io.on('connection', (socket) => {
     socket.on('addPlayer', function(data) {
         const d = JSON.parse(data);
 
-        clientCount++;
-
         if(d.type === 1) {
             players.push(d);
         }
 
         if(clientCount === 3) {
-            
+            console.log('addPlayer:' + players.length);
+
             if(players.length === 2) {
                 start();
             }
@@ -51,10 +52,17 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('removePlayer', function(data) {
+        players = [];
+        io.emit('stop', true);
+    });
+
     socket.on('pong', function(data) {
         const d = JSON.parse(data);
 
         players.push(d);
+
+        console.log('pong:' + players.length);
 
         if(players.length === 2) {
             start();

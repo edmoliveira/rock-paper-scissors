@@ -3,8 +3,8 @@ const factoryButton = (id, image, v, d, move) => {
     
     const _id = id;
     const _image = image;
-    const _listeners = [];
     const _move = move;
+    const _hasImage = image != null;
 
     let _visible = v;
     let _disabled = d;
@@ -24,11 +24,12 @@ const factoryButton = (id, image, v, d, move) => {
     let _moveDirectionAnimation = animationDirectionEnum.NULL;
     
     let self;
-    let animationType;
+    const listeners = [];
 
     class Button {
         get id() { return _id; }
         get image() { return _image; }
+        get hasImage() { return _hasImage; }
         get move() { return _move; }
         get visible() { return _visible; }
         get disabled() { return _disabled; }
@@ -49,17 +50,18 @@ const factoryButton = (id, image, v, d, move) => {
         }
 
         addClickListener(fn) {
-            _listeners.push(fn);
+            listeners.push(fn);
         }
 
         click() {
-            _listeners.forEach(fn => {
+            listeners.forEach(fn => {
                 fn(self);
             });
         }
 
         startCloseAnimation() {
-            animationType = 1;
+            this.endOpenAnimation();
+
             _closeAnimation = animationEnum.ON;
         }
 
@@ -68,7 +70,8 @@ const factoryButton = (id, image, v, d, move) => {
         }
 
         startOpenAnimation() {
-            animationType = 2;
+            this.endCloseAnimation();
+
             _openAnimation = animationEnum.ON;
         }
 
@@ -77,13 +80,11 @@ const factoryButton = (id, image, v, d, move) => {
         }
 
         startMoveDestinyAnimation() {
-            animationType = 3;
             _moveAnimation = animationEnum.ON;
             _moveDirectionAnimation = animationDirectionEnum.DESTINY;
         }
 
         startMoveOriginalAnimation() {
-            animationType = 4;
             _moveAnimation = animationEnum.ON;
             _moveDirectionAnimation = animationDirectionEnum.ORIGINAL;
         }
